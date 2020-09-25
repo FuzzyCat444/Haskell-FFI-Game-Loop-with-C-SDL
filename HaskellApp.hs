@@ -38,9 +38,6 @@ render (AngleState a) = [
 
 -- ^^^^^^^^^^^^^^^^^ Your Application Code Here ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
--- VVVVVVV Foreign export functions for SDL VVVVVVV
-
 hs_windowTitleCallback :: CString -> IO ()
 hs_windowTitleCallback titleArr = 
     writeStringToArray titleArr windowTitle
@@ -102,6 +99,20 @@ foreign export ccall hs_imageResourcesCallback :: IO (Ptr CString)
 hs_maxSpritesCallback :: CInt
 hs_maxSpritesCallback = 1000 -- Change max number of sprites on screen here
 foreign export ccall hs_maxSpritesCallback :: CInt
+
+-- Event system
+data Event = KeyDown Key | KeyUp Key 
+           | MouseDown Button | MouseUp Button
+           | MouseMove (Double, Double)
+           | MouseWheel Double 
+           
+data Button = LeftMouseButton | RightMouseButton
+
+data Key = KeyA | KeyB | KeyC | KeyD | KeyE | KeyF | KeyG | KeyH | KeyI | KeyJ
+         | KeyK | KeyL | KeyM | KeyN | KeyO | KeyP | KeyQ | KeyR | KeyS | KeyT 
+         | KeyU | KeyV | KeyW | KeyX | KeyY | KeyZ
+         
+         | Key0 | Key1 | Key2 | Key3 | Key4 | Key5 | Key6 | Key7 | Key8 | Key9
 
 -- Utility data types and functions to render game state
 data Rect = 
