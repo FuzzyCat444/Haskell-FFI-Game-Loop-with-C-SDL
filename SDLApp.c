@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL.h>
-#include "HaskellApp_stub.h"
+#include "ForeignApp_stub.h"
 
 typedef enum
 {
@@ -152,13 +152,17 @@ int main(int argc, char**argv)
             if (eventType == EV_NONE)
                 continue;
             
-            hs_eventCallback((HsStablePtr) gameState, (int) eventType, (int) key, (int) button, x, y, dx, dy, scroll);
+            gameState = (void*) hs_eventCallback((HsStablePtr) gameState, (int) eventType, (int) key, (int) button, x, y, dx, dy, scroll);
         }
         
         while (delta >= 16)
         {
             gameState = (void*) hs_updateGameStateCallback((HsStablePtr) gameState);
+            hs_doIOCallback((HsStablePtr) gameState);
             hs_writeLogsCallback((HsStablePtr) gameState);
+            if ((int) hs_shouldQuitCallback((HsStablePtr) gameState)) {
+                running = 0;
+            }
             delta -= 16;
         }
         
