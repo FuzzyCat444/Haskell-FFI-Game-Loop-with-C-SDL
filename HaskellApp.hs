@@ -24,21 +24,18 @@ windowSize = (800, 600)
 
 -- Add image resources here
 resources :: [String]
-resources = ["hello.bmp", "goodbye.bmp"] 
+resources = ["hello.bmp"] 
 
 -- Represents current game state/world
-data GameState = AngleState Double 
+data GameState = GameState Double 
 
 -- Initialize the game state
 initGameState :: GameState
-initGameState = AngleState 0 
+initGameState = GameState 0 
 
 -- Handle mouse and keyboard events
 handleEvent :: GameState -> Event -> GameState
-handleEvent (AngleState a) (KeyDown KeyRightArrow) = AngleState (a + 1) 
-handleEvent (AngleState a) (KeyDown KeyLeftArrow) = AngleState (a - 1)
-handleEvent (AngleState a) (MouseWheel scr _) = AngleState (a + scr)
-handleEvent (AngleState a) (MouseMove _ (dx, _)) = AngleState (a + dx)
+handleEvent (GameState angle) (MouseWheel scr _) = GameState (angle + scr)
 handleEvent gs _ = gs
 
 -- Update game state (60 fps)
@@ -47,16 +44,17 @@ update gs = gs
 
 -- Render game state to list of sprites
 render :: GameState -> [Sprite]
-render (AngleState a) 
+render (GameState angle) 
     = [
-          Sprite "goodbye.bmp" NR NR (Point 400 300) a
+          Sprite "hello.bmp" NR NR (Point 400 300) angle
       ] 
 
 -- Console-log information from the game state here (60 fps)
 logs :: GameState -> [String]
-logs (AngleState a) = [
-              "Angle: " ++ show a
-          ]
+logs (GameState angle) 
+    = [
+          "Angle: " ++ show angle
+      ]
 
 -- ^^^^^^^^^^^^^^^^^ Your Application Code Here ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
