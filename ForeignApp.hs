@@ -13,7 +13,7 @@ import Data.Ratio
 import qualified Data.HashMap.Lazy as Map
 import System.Random
 
-import Src.HaskellApp
+import HaskellApp
 import Engine
 
 hs_windowTitleCallback :: CString -> IO ()

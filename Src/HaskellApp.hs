@@ -1,4 +1,4 @@
-module Src.HaskellApp where
+module HaskellApp where
 
 import System.Random
 import Engine
