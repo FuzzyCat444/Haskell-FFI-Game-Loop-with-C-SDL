@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <SDL.h>
+#include <SDL_mixer.h>
 #include "ForeignApp_stub.h"
 
 typedef enum
@@ -49,11 +50,22 @@ int main(int argc, char**argv)
 {
     hs_init(&argc, &argv);
     
-	if (SDL_Init(SDL_INIT_VIDEO) != 0)
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		printf("SDL_Init Error: %s\n", SDL_GetError());
 		return 1;
 	}
+	
+	if (Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 4096) != 0)
+	{
+	    printf("Could not initialize SDL_mixer (audio).\n");
+	    return 1;
+	}
+	
+	int frequency;
+	Uint16 format;
+	int channels;
+	Mix_QuerySpec(&frequency, &format, &channels);
 	
 	char windowTitle[200];
 	hs_windowTitleCallback((HsPtr) windowTitle);
@@ -80,10 +92,41 @@ int main(int argc, char**argv)
 	    textures[i] = tex;
 	}
 	
+	char **soundResources = (char**) hs_soundResourcesCallback();
+	int soundCount = (int) strtol(soundResources[0], NULL, 10);
+	Mix_Chunk **sounds = malloc(soundCount * sizeof(Mix_Chunk*));
+	for (int i = 0; i < soundCount; i++)
+	{
+	    Mix_Chunk *wav = Mix_LoadWAV(soundResources[i + 1]);
+	    if (wav == NULL)
+	    {
+	        printf("Could not load sound file \"%s\".\n", soundResources[i + 1]);
+	        return 1;
+	    }
+	    sounds[i] = wav;
+	}
+	
+	char **musicResources = (char**) hs_musicResourcesCallback();
+	int musicCount = (int) strtol(musicResources[0], NULL, 10);
+	Mix_Music **musics = malloc(musicCount * sizeof(Mix_Music*));
+	for (int i = 0; i < musicCount; i++)
+	{
+	    Mix_Music *mus = Mix_LoadMUS(musicResources[i + 1]);
+	    if (mus == NULL)
+	    {
+	        printf("Could not load music file \"%s\".\n", musicResources[i + 1]);
+	        return 1;
+	    }
+	    musics[i] = mus;
+	}
+	
 	void *gameState = (void*) hs_initGameStateCallback();
 	
 	int maxSprites = (int) hs_maxSpritesCallback();
-	int *spriteData = malloc((maxSprites * 12 + 1) * sizeof(int));
+	int *spriteData = malloc((maxSprites * 13 + 1) * sizeof(int));
+	int maxSounds = (int) hs_maxSoundsCallback();
+	int *soundData = malloc((maxSounds * 3 + 1) * sizeof(int));
+	
 	int running = 1;
 	int ticks = SDL_GetTicks();
 	int delta = 0;
@@ -143,8 +186,6 @@ int main(int argc, char**argv)
                 case SDL_MOUSEWHEEL:
                     eventType = EV_MOUSEWHEEL;
                     scroll = (double) e.wheel.y;
-                    x = (double) e.button.x;
-                    y = (double) e.button.y;
                     break;
                 default: break;
             }
@@ -158,6 +199,49 @@ int main(int argc, char**argv)
         while (delta >= 16)
         {
             gameState = (void*) hs_updateGameStateCallback((HsStablePtr) gameState);
+            hs_playSoundsCallback((HsStablePtr) gameState, (HsPtr) soundData);
+            for (int i = 0; i < soundData[0] * 3; i += 3) {
+                int soundId = soundData[i + 1];
+                if (soundId >= 0)
+                {
+                    int channel = Mix_PlayChannel(-1, sounds[soundId], 0);
+                    double volume = (double) soundData[i + 2] / soundData[i + 3];
+                    if (volume > 1.0) volume = 1.0;
+                    if (volume < 0.0) volume = 0.0;
+                    Mix_Volume(channel, (int) (volume * 128));
+                }
+                else
+                {
+                    printf("Invalid sound id.\n");
+                }
+            }
+            int musicCommand[4];
+            hs_musicCallback((HsStablePtr) gameState, (HsPtr) musicCommand);
+            int loops = 0;
+            switch (musicCommand[0])
+            {
+                case 0:
+                    if (musicCommand[3]) {
+                        loops = -1;
+                    }
+                    Mix_PlayMusic(musics[musicCommand[1]], loops);
+                    Mix_VolumeMusic(musicCommand[2]);
+                    break;
+                case 1:
+                    Mix_VolumeMusic(musicCommand[2]);
+                    break;
+                case 2:
+                    Mix_PauseMusic();
+                    break;
+                case 3:
+                    Mix_ResumeMusic();
+                    break;
+                case 4:
+                    Mix_HaltMusic();
+                    break;
+                default: break;
+            }
+            
             hs_doIOCallback((HsStablePtr) gameState);
             hs_writeLogsCallback((HsStablePtr) gameState);
             if ((int) hs_shouldQuitCallback((HsStablePtr) gameState)) {
@@ -172,19 +256,26 @@ int main(int argc, char**argv)
 		for (int j = 0; j < numSprites * 13; j += 13)
 		{
 		    int spriteId = spriteData[j + 1];
-		    SDL_Rect srcRect = { spriteData[j + 2], spriteData[j + 3], 
-		                         spriteData[j + 4], spriteData[j + 5] };
-            SDL_Rect dstRect = { spriteData[j + 6], spriteData[j + 7], 
-		                         spriteData[j + 8], spriteData[j + 9] };
-            SDL_Point origin = { spriteData[j + 10], spriteData[j + 11] };
-            int angleNum = spriteData[j + 12];
-            int angleDenom = spriteData[j + 13];
-            SDL_Rect *srcRectPtr = srcRect.w == 0 ? NULL : &srcRect;
-            SDL_Rect *dstRectPtr = dstRect.w == 0 ? NULL : &dstRect;
-            SDL_RenderCopyEx(ren, textures[spriteId], 
-                             srcRectPtr, dstRectPtr, 
-                             (double) angleNum / angleDenom, &origin,
-                             SDL_FLIP_NONE);
+		    if (spriteId >= 0)
+		    {
+		        SDL_Rect srcRect = { spriteData[j + 2], spriteData[j + 3], 
+		                             spriteData[j + 4], spriteData[j + 5] };
+                SDL_Rect dstRect = { spriteData[j + 6], spriteData[j + 7], 
+		                             spriteData[j + 8], spriteData[j + 9] };
+                SDL_Point origin = { spriteData[j + 10], spriteData[j + 11] };
+                int angleNum = spriteData[j + 12];
+                int angleDenom = spriteData[j + 13];
+                SDL_Rect *srcRectPtr = srcRect.w == 0 ? NULL : &srcRect;
+                SDL_Rect *dstRectPtr = dstRect.w == 0 ? NULL : &dstRect;
+                SDL_RenderCopyEx(ren, textures[spriteId], 
+                                 srcRectPtr, dstRectPtr, 
+                                 (double) angleNum / angleDenom, &origin,
+                                 SDL_FLIP_NONE);
+            }
+            else
+            {
+                printf("Invalid sprite id.\n");
+            }
 		}
 		SDL_RenderPresent(ren);
 	}
@@ -198,11 +289,33 @@ int main(int argc, char**argv)
         SDL_DestroyTexture(textures[i]);
     }
     
+    free(soundResources[0]);
+    for (int i = 0; i < soundCount; i++)
+    {
+        free(soundResources[i + 1]);
+        Mix_FreeChunk(sounds[i]);
+    }
+    
+    free(musicResources[0]);
+    for (int i = 0; i < musicCount; i++)
+    {
+        free(musicResources[i + 1]);
+        Mix_FreeMusic(musics[i]);
+    }
+    
     free(spriteData);
     free(imageResources);
     free(textures);
+    
+    free(soundData);
+    free(soundResources);
+    free(sounds);
+    
+    free(musicResources);
+    free(musics);
 	SDL_DestroyRenderer(ren);
 	SDL_DestroyWindow(win);
+	Mix_CloseAudio();
 	SDL_Quit();
 	
     hs_exit();

@@ -1,13 +1,16 @@
 module Engine where
 
 -- Event system
-data Event = KeyDown Key | KeyUp Key 
+data Event = KeyDown Key 
+           | KeyUp Key 
            | MouseDown Button (Double, Double) -- (x, y)
            | MouseUp Button (Double, Double) -- (x, y)
            | MouseMove (Double, Double) (Double, Double) -- (x, y) (dx, dy)
-           | MouseWheel Double (Double, Double) -- scroll, (x, y)
+           | MouseWheel Double -- scroll
+           deriving Show
            
 data Button = LeftMouseButton | MiddleMouseButton | RightMouseButton
+    deriving Show
 
 data Key = KeyA | KeyB | KeyC | KeyD | KeyE | KeyF | KeyG | KeyH | KeyI | KeyJ
          | KeyK | KeyL | KeyM | KeyN | KeyO | KeyP | KeyQ | KeyR | KeyS | KeyT 
@@ -25,6 +28,7 @@ data Key = KeyA | KeyB | KeyC | KeyD | KeyE | KeyF | KeyG | KeyH | KeyI | KeyJ
          | KeySpace | KeyTab | KeyLShift | KeyRShift | KeyLCtrl | KeyRCtrl 
          | KeyLAlt | KeyRAlt | KeyDel | KeyIns | KeyEsc | KeyLeftArrow 
          | KeyRightArrow | KeyUpArrow | KeyDownArrow | KeyEnter | KeyBackspace
+         deriving Show
          
 keyFromId :: Int -> Key
 keyFromId 0 = KeyA
@@ -103,11 +107,13 @@ keyFromId 72 = KeyUpArrow
 keyFromId 73 = KeyDownArrow
 keyFromId 74 = KeyEnter
 keyFromId 75 = KeyBackspace
+keyFromId _ = KeyIns
 
 mouseButtonFromId :: Int -> Button
 mouseButtonFromId 0 = LeftMouseButton
 mouseButtonFromId 1 = MiddleMouseButton
 mouseButtonFromId 2 = RightMouseButton
+mouseButtonFromId _ = MiddleMouseButton
          
 constructEvent :: Int -> Int -> Int -> Double -> Double -> 
     Double -> Double -> Double -> Event
@@ -118,32 +124,49 @@ constructEvent 2 _ but mx my _ _ _ = MouseDown theButton (mx, my)
 constructEvent 3 _ but mx my _ _ _ = MouseUp theButton (mx, my)
     where theButton = mouseButtonFromId but
 constructEvent 4 _ _ mx my mdx mdy _ = MouseMove (mx, my) (mdx, mdy)
-constructEvent 5 _ _ mx my _ _ mscr = MouseWheel mscr (mx, my)
-constructEvent _ _ _ _ _ _ _ _ = MouseWheel 0.0 (0.0, 0.0)
+constructEvent 5 _ _ mx my _ _ mscr = MouseWheel mscr
+constructEvent _ _ _ _ _ _ _ _ = MouseWheel 0.0
 --constructEvent e ky but mx my mdx mdy mscr = KeyDown KeyA
 
 -- Utility data types and functions to render game state
 data Rect = 
-    Rect Int Int Int Int |
+    Rect Double Double Double Double |
     NR -- Null rect (use full region of sprite/screen)
+    deriving Show
     
 rectList :: Rect -> [Int]
 rectList NR = [0, 0, 0, 0]
-rectList (Rect x y w h) = [x, y, w, h]
+rectList (Rect x y w h) = map round [x, y, w, h]
 
 data Point =
-    Point Int Int |
+    Point Double Double |
     NP -- Null point (use origin)
+    deriving Show
     
 pointList :: Point -> [Int]
 pointList NP = [0, 0]
-pointList (Point x y) = [x, y]
+pointList (Point x y) = map round [x, y]
 
-data Sprite = 
-    Sprite {
-        id :: String,
-        srcRect :: Rect,
-        dstRect :: Rect,
-        origin :: Point,
-        angle :: Double
-    }
+data Sprite = Sprite {
+                  spriteId :: String,
+                  spriteSrcRect :: Rect,
+                  spriteDstRect :: Rect,
+                  spriteOrigin :: Point,
+                  spriteAngle :: Double
+              } deriving Show
+    
+data Sound = Sound {
+                 soundId :: String,
+                 soundVolume :: Double
+             } deriving Show
+    
+data Music = PlayMusic { 
+                 musicId :: String, 
+                 musicVolume :: Double,
+                 loop :: Bool
+             } 
+           | VolumeMusic Double
+           | PauseMusic 
+           | ResumeMusic 
+           | StopMusic
+             deriving Show

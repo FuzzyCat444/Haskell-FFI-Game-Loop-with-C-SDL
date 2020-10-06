@@ -12,24 +12,40 @@ windowSize :: (Int, Int)
 windowSize = (800, 600) 
 
 -- Add image resources here
-resources :: [String]
-resources = ["hello.bmp"] 
+imageFiles :: [String]
+imageFiles = [] 
+
+-- Add sound resources here
+soundFiles :: [String]
+soundFiles = []
+
+-- Add music resources here
+musicFiles :: [String]
+musicFiles = []
 
 -- Represents current game state/world
-data GameState = GameState Double StdGen
+data GameState = GameState
 
--- Initialize the game state with random number generator
+-- Initialize the game state 
+-- (Optionally with random number generator)
 initGameState :: StdGen -> GameState
-initGameState rng = GameState 0.0 rng
+initGameState rng = GameState
 
 -- Handle mouse and keyboard events
 handleEvent :: GameState -> Event -> GameState
-handleEvent (GameState angle rng) (MouseWheel scr _) = GameState (angle + scr * 5) rng
 handleEvent gs _ = gs
 
 -- Update game state (60 fps)
 update :: GameState -> GameState
-update gs = gs 
+update gs = gs
+
+-- Sounds to play (60 fps)
+sounds :: GameState -> [Sound]
+sounds gs = []
+
+-- Music to play (60 fps)
+music :: GameState -> Music
+music gs = ResumeMusic
 
 -- Do optional IO (60 fps)
 doIO :: GameState -> IO ()
@@ -38,20 +54,28 @@ doIO gs = return ()
 -- Console-log information from the game state here (60 fps)
 -- Prefer this over doIO for logging
 logs :: GameState -> [String]
-logs (GameState angle rng) 
-    = [ 
-          show $ take 3 $ (randomRs (0.0, 1.0) rng :: [Double])
-      ]
+logs gs = []
 
 -- Render game state to list of sprites (no fps limit)
 render :: GameState -> [Sprite]
-render (GameState angle rng) 
-    = [
-          Sprite "hello.bmp" NR NR (Point 400 300) angle
-      ] 
+render gs = []
 
 shouldQuit :: GameState -> Bool
-shouldQuit gs = let (GameState a _) = gs in a > 45
+shouldQuit gs = False
 
 onQuit :: GameState -> IO ()
 onQuit gs = return ()
+
+
+
+
+-- Misc functions (seldom changed)
+
+-- Maximum sprites that can be drawn on the screen
+-- More sprites take more memory
+maxSprites :: Int
+maxSprites = 10000
+
+-- Maximum sounds that can be played at once
+maxSounds :: Int
+maxSounds = 100
