@@ -13,7 +13,7 @@ windowSize = (800, 600)
 
 -- Add image resources here
 imageFiles :: [String]
-imageFiles = [] 
+imageFiles = []
 
 -- Add sound resources here
 soundFiles :: [String]
